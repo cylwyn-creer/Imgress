@@ -193,7 +193,6 @@ public class Frame extends JFrame {
 		desktopPane = new JDesktopPane();
 		
 		imgFrame = new JInternalFrame("Image", true, true, true, true);
-		imgFrame.setSize(600, 400);
 		imgFrame.hide();
 		imgFrame.setDefaultCloseOperation(HIDE_ON_CLOSE);
 		
@@ -208,7 +207,6 @@ public class Frame extends JFrame {
 		
 		
 		compFrame = new JInternalFrame("Compressed Image", true, true, true, true);
-		compFrame.setSize(600, 400);
 		compFrame.hide();
 		compFrame.setDefaultCloseOperation(HIDE_ON_CLOSE);
 		
@@ -362,20 +360,31 @@ public class Frame extends JFrame {
 				
 				if(desktopPane.getSelectedFrame() == imgFrame) {
 					
-					chooser.setDialogTitle("Update file");
+					chooser.setDialogTitle("Save in");
 					chooser.setFileFilter(new FileNameExtensionFilter("HUFF File", "huff"));
 					
 					option = chooser.showOpenDialog(Frame.this);
 					
 					if(option == JFileChooser.APPROVE_OPTION) {
 						
-						if(chooser.getSelectedFile().getName().endsWith(".huff")) {
-							//update here
-						}
-						else {
-							JOptionPane.showMessageDialog(frame, "File format not supported!", "Invalid file", JOptionPane.ERROR_MESSAGE);
-						}
-						
+						if(chooser.getSelectedFile().getName().endsWith(".huff"))
+							try {
+								
+								//queue = new PriorityQueue();
+								pqueue = new PriorityQueue<Tree>(10, comparator);
+								
+								long strt = System.currentTimeMillis();
+								updateFile(chooser.getSelectedFile());
+								//compress(chooser.getSelectedFile());
+								//generateBitString(image, chooser.getSelectedFile());
+								long time = System.currentTimeMillis() - strt;
+								System.out.println("Done time: " + time);
+								
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						else 
+							JOptionPane.showMessageDialog(frame, "File format not supported!", "Invalid file", JOptionPane.ERROR_MESSAGE);		
 					}
 					
 				} else {
@@ -463,8 +472,9 @@ public class Frame extends JFrame {
 			
 			if(event.getActionCommand() == closeItem.getActionCommand()) {
 				
-				if(!desktopPane.getSelectedFrame().isIcon()) 
-					desktopPane.getSelectedFrame().hide();
+				if(desktopPane.getSelectedFrame() != null) 
+					if(!desktopPane.getSelectedFrame().isIcon()) 
+						desktopPane.getSelectedFrame().hide();
 				
 			}
 			
@@ -580,29 +590,84 @@ public class Frame extends JFrame {
 		
 	}
 	
-	public void updateFile(File huffFile) {
+	public void updateFile(File huffFile) throws IOException {
 		
 		Scanner read;
+		FileWriter fileWriter;
+		BufferedWriter buff;
 		hmap = new HashMap<Integer, Integer>();
 		
 		try {
 			
 			read = new Scanner(huffFile);
 			
+			System.out.println("Reading: "  + huffFile.getName());
 			while(read.hasNext()) {
 				
-				
+				hmap.put(read.nextInt(), read.nextInt());
 				
 			}
+			System.out.println("Done Reading: "  + huffFile.getName());
 			
 			read.close();
 			
+			image = ImageIO.read(file);
+			
+			int w = image.getWidth();
+			int h = image.getHeight();
+
+			int[] dataBuffInt = image.getRGB(0, 0, w, h, null, 0, w); 
+			
+			int freq;
+			
+			System.out.println("Reading: "  + file.getName());
+			for(int i = 0; i < dataBuffInt.length; i++) {
+				
+				if(hmap.containsKey(dataBuffInt[i])) {
+					
+					freq = hmap.get(dataBuffInt[i]);
+					
+					hmap.remove(dataBuffInt[i]);
+					hmap.put(dataBuffInt[i], freq+1);
+					
+				} else {
+					
+					hmap.put(dataBuffInt[i], 1);
+					
+				}
+				
+			}
+			System.out.println("Done Reading: "  + file.getName());
 			
 		} catch (FileNotFoundException e) {
 			
 			e.printStackTrace();
 			
 		}
+		
+		try {
+			
+			fileWriter = new FileWriter(huffFile);
+			buff = new BufferedWriter(fileWriter);
+
+			Set set = hmap.entrySet();
+			Iterator iterator = set.iterator();
+			while(iterator.hasNext()) {
+				
+				Map.Entry entry = (Map.Entry)iterator.next();
+				buff.write(entry.getKey() + " " + entry.getValue());
+				buff.newLine();
+				
+			}
+			
+			buff.close();
+			
+		} catch (IOException e) {
+			
+			e.printStackTrace();
+			
+		}
+		
 		
 	}
 	
@@ -746,23 +811,7 @@ public class Frame extends JFrame {
 		int startIndex = 0;
 		
 		String code = "";
-		/*
-		for(int i = 0; i < huffmanCode.length(); i++) {
-			System.out.println(i);
-			code = huffmanCode.substring(startIndex, i + 1);
-			
-			if(hmap3.containsKey(code)) {
-				huffmanImage.setRGB(x++, y, hmap3.get(code));
-				
-				startIndex = i + 1;
-				
-				if(x % width == 0) {
-					x = 0;
-					y++;
-				}
-			}
-		}
-		*/
+		
 		int i = minCodeLength;
 		while(true) {
 			System.out.println(i);
@@ -804,6 +853,19 @@ public class Frame extends JFrame {
 				imgFrame.setTitle(file.getName());
 				imgFrame.setVisible(true);
 				
+				if(origImage.getIconWidth() < desktopPane.getWidth() && origImage.getIconHeight() < desktopPane.getHeight()) {
+					
+					imgFrame.setSize(origImage.getIconWidth() + 60, origImage.getIconHeight() + 60);
+					imgFrame.setLocation((desktopPane.getWidth() - imgFrame.getWidth()) / 2, (desktopPane.getHeight() - imgFrame.getHeight()) / 2);
+				
+				} else {
+					
+					imgFrame.setLocation(0, 0);
+					imgFrame.setSize(desktopPane.getWidth(), desktopPane.getHeight());
+					
+				}
+				
+				
 			} else {
 				
 				JOptionPane.showMessageDialog(frame, "Workspace is not available\nclose image first ", "Workspace", JOptionPane.ERROR_MESSAGE);
@@ -830,6 +892,18 @@ public class Frame extends JFrame {
 				
 				compFrame.setTitle(himgFile.getName());
 				compFrame.setVisible(true);
+				
+				if(compImage.getIconWidth() < desktopPane.getWidth() && compImage.getIconHeight() < desktopPane.getHeight()) {
+					
+					compFrame.setSize(compImage.getIconWidth() + 60, compImage.getIconHeight() + 60);
+					compFrame.setLocation((desktopPane.getWidth() - compFrame.getWidth()) / 2, (desktopPane.getHeight() - compFrame.getHeight()) / 2);
+				
+				} else {
+					
+					compFrame.setLocation(0, 0);
+					compFrame.setSize(desktopPane.getWidth(), desktopPane.getHeight());
+					
+				}
 				
 			} else {
 				

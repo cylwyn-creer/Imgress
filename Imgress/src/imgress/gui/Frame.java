@@ -1,6 +1,7 @@
 package imgress.gui;
 
-import java.awt.Toolkit;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
@@ -8,8 +9,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.beans.PropertyVetoException;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
@@ -30,8 +29,8 @@ import java.util.Scanner;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -42,11 +41,11 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -80,7 +79,7 @@ public class Frame extends JFrame {
 	
 	private JLabel origImageL, compImageL;
 	private JPanel origImagePanel, compImagePanel;
-	private JScrollPane imgPane, compPane, helpPane, aboutPane;
+	private JScrollPane imgPane, compPane;
 	private ImageIcon origImage, compImage;
 	
 	private File file;
@@ -96,17 +95,11 @@ public class Frame extends JFrame {
 	private int height = 0;
 	private int bitlength = 0;
 	
-	private JButton done;
-	private JLabel progressL;
-	private JProgressBar progress;
-	
-	private JFrame progressDialog;
-	
-	private Compress compressTask;
-	
-	private PropertyChangeHandler property;
-	
 	private int minCodeLength = 0;
+	private JLabel shortcut, instructions, aboutText;
+	
+	private JTextArea status;
+	private JScrollPane statusPane;
 	
 	public Frame() {
 		
@@ -229,15 +222,22 @@ public class Frame extends JFrame {
 		aboutFrame.hide();
 		aboutFrame.setDefaultCloseOperation(HIDE_ON_CLOSE);
 		
+		createHelpText();
+		createAboutText();
+		
 		desktopPane.add(imgFrame);
 		desktopPane.add(compFrame);
 		desktopPane.add(helpFrame);
 		desktopPane.add(aboutFrame);
 		
+		desktopPane.setBounds(5, 5, 985, 475);
+		
 		add(desktopPane);
 		
 		setIconImage(new ImageIcon(this.getClass().getResource("/res/image/icon.png")).getImage());
-		setSize(800, 500);
+		setSize(1000, 650);
+		setLayout(null);
+		setResizable(false);
 		setVisible(true);
 		setLocationRelativeTo(null);
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -255,32 +255,70 @@ public class Frame extends JFrame {
 			}
 			
 		});
+		
+		displayDetails();
+		
 	}
 	
-	public void initProgressBar() {
-		progressDialog = new JFrame();
+	public void displayDetails() {
+		status = new JTextArea();
+		status.setEditable(false);
+		status.setBorder(BorderFactory.createTitledBorder("Status"));
+		status.setWrapStyleWord(true);
 		
-		progressL = new JLabel();
-		progressDialog.add(progressL);
+		statusPane = new JScrollPane(status);
+		statusPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		statusPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		statusPane.setBounds(5, 480, 985, 115);
+		add(statusPane);
+	}
+	
+	public void createHelpText() {
 		
-		progress = new JProgressBar(0, 100);
-		progress.setValue(0);
-		progress.setStringPainted(true);
-		progressDialog.add(progress);
+		helpFrame.setLayout(null);
 		
-		done = new JButton("Done");
-		done.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				progressDialog.dispose();
-			}
-		});
-		done.setEnabled(false);
-		progressDialog.add(done);
+		shortcut = new JLabel("<html><h3><center>Shortcut Keys</h3></center>"
+				+ "Ctrl + O (Open)<br> Ctrl + X (Close) <br>  Ctrl + C " +
+				"(Compress) <br> Ctrl + R (Render) <br> Ctrl + A (About) <br>"
+				+ "F1 (Help) <br> Alt + F (File) <br> Alt + T (Tools) <br>"
+				+ "Alt + H (Help Menu)</html>", SwingConstants.CENTER);
+		shortcut.setFont(new Font("Courier New", Font.BOLD, 12));
+		shortcut.setBounds(50, -50, 200, 300);
 		
-		property = new PropertyChangeHandler();
+		instructions = new JLabel("<html><b>How to Compress Image</b><br>"
+				+ "1. Opening an Image <br> &nbsp&nbsp File -> Open -> Select .png image <br>"
+				+ "2. Train an Image <br> &nbsp&nbsp Tools -> Train -> Create New Huffman Tree -> Select Directory or <br>"
+				+ "&nbsp&nbsp Tools -> Train -> Update Huffman Tree -> Select Directory <br>"
+				+ "3. Compress Image <br> &nbsp&nbsp Tools -> Compress -> Select .huff file <br>"
+				+ "4. Render Huffman Image <br> &nbsp&nbsp Tools -> Render Huffman Image -> Select .huff file -> "
+				+ "Select .himg file </html>");
 		
-		progressDialog.pack();
-		progressDialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		instructions.setFont(new Font("Courier New", Font.BOLD, 12));
+		instructions.setBounds(300, -40, 300, 300);
+		
+		helpFrame.add(shortcut);
+		helpFrame.add(instructions);
+		
+	}
+	
+	public void createAboutText() {
+		
+		aboutFrame.setLayout(new FlowLayout());
+		
+		JLabel iconL = new JLabel(new ImageIcon(this.getClass().getResource("/res/image/icon2.png")));
+		iconL.setBounds(0, 0, 100, 100);
+		
+		aboutText = new JLabel("<html>Program: Imgress <br> Version: 1.0 <br> Developers:"
+				+ " Creer, Cylwyn Ronald M. <br> Dublin, Rodney O. <br> Description: "
+				+ "This program is used <br> for image compression (i.e. PNG image) <br> using Huffman coding. "
+				+ "<br><br> &nbsp&nbsp&nbsp _____________________________ <br> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp "
+				+ "Copyright &copy 2017 <br> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp All rights reserved.</html>", SwingConstants.CENTER);
+		aboutText.setFont(new Font("Courier New", Font.BOLD, 12));
+		aboutText.setBounds(70, 10, 200, 200);
+		
+		aboutFrame.add(iconL);
+		aboutFrame.add(aboutText);
+		
 	}
 	
 	private class MenuEventHandler implements ActionListener {
@@ -291,6 +329,7 @@ public class Frame extends JFrame {
 			chooser.setAcceptAllFileFilterUsed(false);
 			int option, button, option2;
 			
+			status.setText("");
 			if(event.getActionCommand() == exitItem.getActionCommand()) {
 				
 				button = JOptionPane.showConfirmDialog(null,"Are you sure?", "Warning", JOptionPane.YES_NO_OPTION);
@@ -308,23 +347,30 @@ public class Frame extends JFrame {
 			
 			if(event.getActionCommand() == helpItem.getActionCommand()) {
 				
-				helpFrame.show();
-				try {
-					helpFrame.setSelected(true);
-				} catch (PropertyVetoException e) {
-					e.printStackTrace();
+				if(!helpFrame.isShowing()) {
+					helpFrame.show();
+					helpFrame.setSize(650, 300);
+					helpFrame.setLocation((desktopPane.getWidth() - 650) / 2, (desktopPane.getHeight() - 300) / 2);
+					try {
+						helpFrame.setSelected(true);
+					} catch (PropertyVetoException e) {
+						e.printStackTrace();
+					}
 				}
-			
 				
 			}
 			
 			if(event.getActionCommand() == aboutItem.getActionCommand()) {
 				
-				aboutFrame.show();
-				try {
-					aboutFrame.setSelected(true);
-				} catch (PropertyVetoException e) {
-					e.printStackTrace();
+				if(!aboutFrame.isShowing()) {
+					aboutFrame.show();
+					aboutFrame.setSize(300, 300);
+					aboutFrame.setLocation((desktopPane.getWidth() - 300) / 2, (desktopPane.getHeight() - 300) / 2);
+					try {
+						aboutFrame.setSelected(true);
+					} catch (PropertyVetoException e) {
+						e.printStackTrace();
+					}
 				}
 				
 			}
@@ -340,11 +386,8 @@ public class Frame extends JFrame {
 					
 					if(option == JFileChooser.APPROVE_OPTION) {
 						
-						long strt = System.currentTimeMillis();
 						createNewHuffman(chooser.getSelectedFile());
-						long time = System.currentTimeMillis() - strt;
-						System.out.println("Done time: " + time);
-									
+
 					} 
 					
 				} else {
@@ -370,15 +413,8 @@ public class Frame extends JFrame {
 						if(chooser.getSelectedFile().getName().endsWith(".huff"))
 							try {
 								
-								//queue = new PriorityQueue();
 								pqueue = new PriorityQueue<Tree>(10, comparator);
-								
-								long strt = System.currentTimeMillis();
 								updateFile(chooser.getSelectedFile());
-								//compress(chooser.getSelectedFile());
-								//generateBitString(image, chooser.getSelectedFile());
-								long time = System.currentTimeMillis() - strt;
-								System.out.println("Done time: " + time);
 								
 							} catch (IOException e) {
 								e.printStackTrace();
@@ -415,10 +451,9 @@ public class Frame extends JFrame {
 					File himgFile = chooser.getSelectedFile();
 					
 					if(option2 == JFileChooser.APPROVE_OPTION) {
-						long strt = System.currentTimeMillis();
+						
 						decompress(huffFile, himgFile);
-						long time = System.currentTimeMillis() - strt;
-						System.out.println("Done time: " + time);
+						
 					}
 					
 				}
@@ -440,20 +475,8 @@ public class Frame extends JFrame {
 							try {
 								
 								image = ImageIO.read(file);
-								/*
-								long strt = System.currentTimeMillis();
 								compress(chooser.getSelectedFile());
 								generateBitString(image, chooser.getSelectedFile());
-								long time = System.currentTimeMillis() - strt;
-								System.out.println("Done time: " + time);
-								*/
-								
-								initProgressBar();
-								compressTask = new Compress(chooser.getSelectedFile(), image);
-								compressTask.addPropertyChangeListener(property);
-								progressDialog.setTitle("Compressing Image...");
-								progressDialog.setVisible(true);
-								compressTask.execute();
 								
 							} catch (IOException e) {
 								e.printStackTrace();
@@ -1031,53 +1054,6 @@ public class Frame extends JFrame {
 			e.printStackTrace();
 		}
 		
-	}
-	
-	private class Compress extends SwingWorker<Void, Void> {
-		
-		private File file;
-		private BufferedImage orig;
-		
-		public Compress(File selected, BufferedImage image) {
-			file = selected;
-			orig = image;
-		}
-		
-		@Override
-		public Void doInBackground() throws IOException {
-			
-			int progress = 0;
-			
-			setProgress(progress);
-			progressL.setText("Retrieving huffman tree...");
-			compress(file);
-			progress = 50;
-			setProgress(progress);
-			progressL.setText("Generating HIMG file...");
-			generateBitString(orig, file);
-			progress = 100;
-			setProgress(progress);
-			
-			return null;
-			
-		}
-		
-		@Override
-		public void done() {
-			Toolkit.getDefaultToolkit().beep();
-			done.setEnabled(true);
-			progressL.setText("Done!");
-		}
-		
-	}
-	
-	private class PropertyChangeHandler implements PropertyChangeListener {
-		public void propertyChange(PropertyChangeEvent e) {
-			if("progress" == e.getPropertyName()) {
-				int progressV = (Integer) e.getNewValue();
-				progress.setValue(progressV);
-			}
-		}
 	}
 	
 }

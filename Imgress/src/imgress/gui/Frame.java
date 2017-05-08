@@ -13,17 +13,19 @@ import java.beans.PropertyVetoException;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Scanner;
 import java.util.Set;
@@ -88,12 +90,12 @@ public class Frame extends JFrame {
 	private HashMap<Integer, String> hmap2;
 	private HashMap<String, Integer> hmap3;
 	
+	@SuppressWarnings("unused")
 	private Tree huffmanTree;
 	private BufferedImage image;
 	
 	private int width = 0;
 	private int height = 0;
-	private int bitlength = 0;
 	
 	private int minCodeLength = 0;
 	private JLabel shortcut, instructions, aboutText;
@@ -386,7 +388,9 @@ public class Frame extends JFrame {
 					
 					if(option == JFileChooser.APPROVE_OPTION) {
 						
+						status.append("Creating new huffman tree...\n");
 						createNewHuffman(chooser.getSelectedFile());
+						status.append("New huffman tree created as : " + file.getName().substring(0, file.getName().length() - 4) + ".huff");
 
 					} 
 					
@@ -413,8 +417,10 @@ public class Frame extends JFrame {
 						if(chooser.getSelectedFile().getName().endsWith(".huff"))
 							try {
 								
+								status.append("Updating existing huffman tree...\n");
 								pqueue = new PriorityQueue<Tree>(10, comparator);
 								updateFile(chooser.getSelectedFile());
+								status.append("Huffman tree updated : " + file.getName().substring(0, file.getName().length() - 4) + ".huff");
 								
 							} catch (IOException e) {
 								e.printStackTrace();
@@ -525,8 +531,6 @@ public class Frame extends JFrame {
 				file = fileChooser.getSelectedFile();
 				String fileName = file.getName().toUpperCase();
 				
-				System.out.println("file choosen: " + file + "\nfile: " + fileName);
-				
 				if((fileName.equals("")) || !fileName.endsWith(".PNG")) {
 					
 					JOptionPane.showMessageDialog(this, "File format not supported!", "Invalid File", JOptionPane.ERROR_MESSAGE);
@@ -562,11 +566,14 @@ public class Frame extends JFrame {
 			
 			int w = image.getWidth();
 			int h = image.getHeight();
-
-			int[] dataBuffInt = image.getRGB(0, 0, w, h, null, 0, w); 
+			
+			status.append("Getting image's pixel information...\n");
+			int[] dataBuffInt = image.getRGB(0, 0, w, h, null, 0, w);
+			status.append("Image's pixel information gathered.\n");
 			
 			int freq;
 			
+			status.append("Checking each pixel's frequency...\n");
 			for(int i = 0; i < dataBuffInt.length; i++) {
 				
 				if(hmap.containsKey(dataBuffInt[i])) {
@@ -583,6 +590,7 @@ public class Frame extends JFrame {
 				}
 				
 			}
+			status.append("Pixel distribution recorded.\n");
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -590,13 +598,15 @@ public class Frame extends JFrame {
 		
 		try {
 			
+			status.append("Saving huffman tree as .huff file...\n");
 			fileWriter = new FileWriter(name);
 			buff = new BufferedWriter(fileWriter);
 
-			Set set = hmap.entrySet();
-			Iterator iterator = set.iterator();
+			Set<Entry<Integer, Integer>> set = hmap.entrySet();
+			Iterator<Entry<Integer, Integer>> iterator = set.iterator();
 			while(iterator.hasNext()) {
 				
+				@SuppressWarnings("rawtypes")
 				Map.Entry entry = (Map.Entry)iterator.next();
 				buff.write(entry.getKey() + " " + entry.getValue());
 				buff.newLine();
@@ -624,13 +634,14 @@ public class Frame extends JFrame {
 			
 			read = new Scanner(huffFile);
 			
-			System.out.println("Reading: "  + huffFile.getName());
+			
+			status.append("Retrieving huffman tree data...\n");
 			while(read.hasNext()) {
 				
 				hmap.put(read.nextInt(), read.nextInt());
 				
 			}
-			System.out.println("Done Reading: "  + huffFile.getName());
+			status.append("Huffman tree data retrieved successfully.\n");
 			
 			read.close();
 			
@@ -642,8 +653,8 @@ public class Frame extends JFrame {
 			int[] dataBuffInt = image.getRGB(0, 0, w, h, null, 0, w); 
 			
 			int freq;
-			
-			System.out.println("Reading: "  + file.getName());
+
+			status.append("Updating system...\n");
 			for(int i = 0; i < dataBuffInt.length; i++) {
 				
 				if(hmap.containsKey(dataBuffInt[i])) {
@@ -660,7 +671,6 @@ public class Frame extends JFrame {
 				}
 				
 			}
-			System.out.println("Done Reading: "  + file.getName());
 			
 		} catch (FileNotFoundException e) {
 			
@@ -673,10 +683,11 @@ public class Frame extends JFrame {
 			fileWriter = new FileWriter(huffFile);
 			buff = new BufferedWriter(fileWriter);
 
-			Set set = hmap.entrySet();
-			Iterator iterator = set.iterator();
+			Set<Entry<Integer, Integer>> set = hmap.entrySet();
+			Iterator<Entry<Integer, Integer>> iterator = set.iterator();
 			while(iterator.hasNext()) {
 				
+				@SuppressWarnings("rawtypes")
 				Map.Entry entry = (Map.Entry)iterator.next();
 				buff.write(entry.getKey() + " " + entry.getValue());
 				buff.newLine();
@@ -730,16 +741,6 @@ public class Frame extends JFrame {
 		
 		huffmanTree = createHuffmanTree(pqueue);
 		
-		System.out.println("Huffman Coding");
-		Set set = hmap2.entrySet();
-		Iterator iterator = set.iterator();
-		while(iterator.hasNext()) {
-			
-			Map.Entry entry = (Map.Entry)iterator.next();
-			System.out.println(entry.getKey() + " " + entry.getValue());
-			
-		}
-		
 	}
 	
 	public void decompress(File huffFile, File himgFile) {
@@ -748,11 +749,12 @@ public class Frame extends JFrame {
 		
 		huffmanTree = createHuffmanTree(pqueue);
 		
-		Set set = hmap2.entrySet();
-		Iterator iterator = set.iterator();
+		Set<Entry<Integer, String>> set = hmap2.entrySet();
+		Iterator<Entry<Integer, String>> iterator = set.iterator();
 		boolean tracked = false;
 		
 		while(iterator.hasNext()) {
+			@SuppressWarnings("rawtypes")
 			Map.Entry entry = (Map.Entry)iterator.next();
 			
 			String val = (String) entry.getValue();
@@ -777,48 +779,53 @@ public class Frame extends JFrame {
 		openHimg(himgFile);
 		
 	}
-	
+		
 	public String loadHimgFile(File himgFile) {
 		String bitstring = "";
 		
 		try {
 			DataInputStream in = new DataInputStream(new FileInputStream(himgFile));
-			FileWriter wr = new FileWriter(new File(himgFile.toString().substring(0, himgFile.toString().length() - 5) + ".new"));
 			
-			width = in.readInt();
-			height = in.readInt();
+			byte[] byteData = new byte[(int) himgFile.length()];
 			
-			String temp = "";
-			while(true) {
-
-				try {
-					temp = Integer.toBinaryString(in.readInt());
-				
-					int pad = 0;
-					if(temp.length() % 31 != 0) {
-						pad = 31 - (temp.length() % 31);
-					}
-				
-					for(int a = 0; a < pad; a++) {
-						temp = '0' + temp;
-					}
-				
-					bitstring = bitstring + temp;
-				}
-				catch(EOFException ex) {
-					bitlength = Integer.parseInt(temp, 2);
-					temp = bitstring.substring(bitstring.length() - (31 + bitlength), bitstring.length() - 31);
-					
-					bitstring = bitstring.substring(0, bitstring.length() - 62);
-					bitstring = bitstring + temp;
-					
-					break;
-				}
+			in.readFully(byteData);
+			
+			byte[] arrW = new byte[4];
+			byte[] arrH = new byte[4];
+			byte[] bitL = new byte[4];
+			
+			System.arraycopy(byteData, 0, arrW, 0, 4);
+			System.arraycopy(byteData, 4, arrH, 0, 4);
+			System.arraycopy(byteData, byteData.length - 4, bitL, 0, 4);
+			
+			ByteBuffer buf = ByteBuffer.wrap(arrW);
+			width = buf.getInt();
+			buf = ByteBuffer.wrap(arrH);
+			height = buf.getInt();
+			buf = ByteBuffer.wrap(bitL);
+			int bitStringLength = buf.getInt();
+			
+			byte[] real = new byte[byteData.length - 12];
+			System.arraycopy(byteData, 8, real, 0, byteData.length - 12);
+			
+			BigInteger bigInt = new BigInteger(real);
+			bitstring = bigInt.toString(2);
+			
+			int pad = 0;
+			if(bitstring.length() % (real.length * 8) != 0) {
+				pad = (real.length * 8) - (bitstring.length() % (real.length * 8));
+			}
+		
+			for(int a = 0; a < pad; a++) {
+				bitstring = '0' + bitstring;
 			}
 			
-			wr.write(bitstring);
+			String temp = bitstring.substring(bitstring.length() - (32 + bitStringLength), bitstring.length() - 32);
+			
+			bitstring = bitstring.substring(0, bitstring.length() - 32);
+			bitstring = bitstring + temp;
+			
 			in.close();
-			wr.close();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -831,20 +838,18 @@ public class Frame extends JFrame {
 		BufferedImage huffmanImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		int x = 0;
 		int y = 0;
-		int startIndex = 0;
 		
 		String code = "";
 		
-		int i = minCodeLength;
-		while(true) {
-			System.out.println(i);
-			code = huffmanCode.substring(startIndex, i);
+		for(int a = 0; a < huffmanCode.length(); a++) {
+			if(a % 32 != 0) {
+				code = code + huffmanCode.charAt(a);
+			}
 			
 			if(hmap3.containsKey(code)) {
 				huffmanImage.setRGB(x++, y, hmap3.get(code));
 				
-				startIndex = i;
-				i = startIndex + minCodeLength;
+				code = "";
 				
 				if(x % width == 0) {
 					x = 0;
@@ -854,9 +859,6 @@ public class Frame extends JFrame {
 				if(y != 0 && y % height == 0) {
 					break;
 				}
-			}
-			else {
-				i++;
 			}
 		}
 		
@@ -1006,7 +1008,6 @@ public class Frame extends JFrame {
 		
 		try {
 			DataOutputStream out = new DataOutputStream(new FileOutputStream(name));
-			FileWriter wr = new FileWriter(new File(filename.substring(0, filename.length() - 5) + ".txt"));
 			
 			int w = img.getWidth();
 			int h = img.getHeight();
@@ -1025,7 +1026,6 @@ public class Frame extends JFrame {
 					while(bit.length() >= 31) {
 						
 						out.writeInt(Integer.parseInt(bit.substring(0, 31), 2));
-						wr.write(bit.substring(0, 31));
 						bit = bit.substring(31, bit.length());
 						
 					}
@@ -1042,13 +1042,11 @@ public class Frame extends JFrame {
 			if(bit.length() > 0) {
 				
 				out.writeInt(Integer.parseInt(bit, 2));
-				wr.write(bit);
 				out.writeInt(bit.length());
 				
 			}
 			
 			out.close();
-			wr.close();
 			
 		} catch (IOException e) {
 			e.printStackTrace();
